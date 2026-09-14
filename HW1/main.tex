@@ -1,7 +1,15 @@
-\documentclass{article}
-\usepackage{graphicx} % Required for inserting images
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
 
-\title{CSCI 567}
+% short names for vectors / matrices used in the problem set
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\emprisk}{\hat{R}}
+
+\title{CSCI 567 -- Homework 1}
 \author{Zhirong Wang}
 \date{September 2026}
 
@@ -9,6 +17,280 @@
 
 \maketitle
 
-\section{Introduction}
+%=====================================================
+\section*{Problem 1: linear algebra and gradients warm-up}
+
+\subsection*{1.1}
+% gradient of g(w) = b^T w + 1/2 w^T A w
+
+\[
+\nabla_{\vect{w}}\, g(\vect{w})
+= \nabla_{\vect{w}}\big(\vect{b}^\top \vect{w}\big) + \tfrac12\, \nabla_{\vect{w}}\big(\vect{w}^\top A \vect{w}\big)
+= \vect{b} + \tfrac12\big(A\vect{w} + A^\top \vect{w}\big)
+\]
+Since $A$ is symmetric, $A^\top = A$, so
+\[
+\nabla_{\vect{w}}\, g(\vect{w}) = \vect{b} + A\vect{w}.
+\]
+
+\vspace{1cm}
+
+\subsection*{1.2}
+% rank(x x^T)
+
+\[
+\vect{x}\vect{x}^\top =
+\begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix}
+\begin{bmatrix} x_1 & x_2 & \cdots & x_n \end{bmatrix}
+=
+\begin{bmatrix}
+x_1 x_1 & x_1 x_2 & \cdots & x_1 x_n \\
+x_2 x_1 & x_2 x_2 & \cdots & x_2 x_n \\
+\vdots  & \vdots  & \ddots & \vdots  \\
+x_n x_1 & x_n x_2 & \cdots & x_n x_n
+\end{bmatrix}
+=
+\begin{bmatrix} x_1 \vect{x}^\top \\ x_2 \vect{x}^\top \\ \vdots \\ x_n \vect{x}^\top \end{bmatrix}.
+\]
+Every row is a scalar multiple of $\vect{x}^\top$, so there is only one linearly independent row.
+Since $\vect{x} \neq \vect{0}$, $\operatorname{rank}(\vect{x}\vect{x}^\top) = 1$.
+
+\vspace{1cm}
+
+\subsection*{1.3}
+% tr(AB) = tr(BA)
+
+$AB \in \R^{m\times m}$ with $(AB)_{ii} = \sum_{j=1}^{n} A_{ij}B_{ji}$, and
+$BA \in \R^{n\times n}$ with $(BA)_{jj} = \sum_{i=1}^{m} B_{ji}A_{ij}$. Hence
+\[
+\operatorname{tr}(AB)
+= \sum_{i=1}^{m} (AB)_{ii}
+= \sum_{i=1}^{m} \sum_{j=1}^{n} A_{ij} B_{ji}
+= \sum_{j=1}^{n} \sum_{i=1}^{m} B_{ji} A_{ij}
+= \sum_{j=1}^{n} (BA)_{jj}
+= \operatorname{tr}(BA),
+\]
+\vspace{1cm}
+
+\subsection*{1.4}
+% A = [[2,1],[1,2]] is PSD
+
+Let $\vect{x} = \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}$. Then
+\begin{align*}
+\vect{x}^\top A \vect{x}
+&= \begin{bmatrix} x_1 & x_2 \end{bmatrix}
+   \begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}
+   \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}
+ = \begin{bmatrix} 2x_1 + x_2 & x_1 + 2x_2 \end{bmatrix}
+   \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} \\
+&= (2x_1 + x_2)x_1 + (x_1 + 2x_2)x_2 \\
+&= 2x_1^2 + 2x_1x_2 + 2x_2^2 \\
+&= (x_1 + x_2)^2 + x_1^2 + x_2^2 .
+\end{align*}
+Each of the three terms is a square, hence $\geq 0$, so $\vect{x}^\top A \vect{x} \geq 0$ for all
+$\vect{x} \in \R^2$. Therefore $A$ is positive semidefinite.
+
+\vspace{3cm}
+
+
+%=====================================================
+\section*{Problem 2: name that failure}
+
+\subsection*{2.1}
+This is distribution shift, because the target corpus has changed, in 2026, it includes many new slang, which the model has not been trained on.
+
+
+\subsection*{2.2}
+This is contamination issue, because the LLM has been already trained on the benchmark test questions, when test on the benchmark again, the model may already know the answer, it is just output results from memory.
+
+
+\subsection*{2.3}
+This is adaptive overfitting, since the researchers keep choosing the best performance model on a same test set, so the model choice is gonna favor this data set but may have poor performance on new dataset.
+
+
+\subsection*{2.4}
+This is construct validity, because answer the multiple choice questions' ability is different than diagnosis real patients. When facing real patient, we need gather information and make conlcusions, instead of choosing a corect answer from fixed choices. 
+\vspace{1cm}
+
+%=====================================================
+\section*{Problem 3: how much can you trust a test-set number?}
+
+\subsection*{3.1 Sizing a test set}
+Hoeffding's inequality gives
+\[
+P\big(|\bar{Z} - \mu| \geq \epsilon\big) \;\leq\; 2e^{-2n\epsilon^2}.
+\]
+We want this failure probability to be at most $\delta$:
+\[
+2e^{-2n\epsilon^2} \leq \delta
+\;\iff\; -2n\epsilon^2 \leq \ln\frac{\delta}{2}
+\;\iff\; n \;\geq\; \frac{\ln(2/\delta)}{2\epsilon^2}.
+\]
+With $\delta = 0.05$, $\ln(2/\delta) \approx 3.689$, so
+\[
+\epsilon = 0.01:\quad n \geq \frac{3.689}{2(0.01)^2} \approx 18{,}445,
+\qquad
+\epsilon = 0.001:\quad n \geq \frac{3.689}{2(0.001)^2} \approx 1{,}844{,}440
+\]
+Adding $\epsilon$ one more decimal digit of certified precision required test set size multiply by $100$.
+
+\vspace{1cm}
+
+\subsection*{3.2 Two test sets, two intervals}
+
+\paragraph{(i)}
+\begin{align*}
+2e^{-2n_j\epsilon_j^2} &= \delta_j \\
+e^{-2n_j\epsilon_j^2} &= \frac{\delta_j}{2}  = 0.025 \\
+-2n_j\epsilon_j^2 &= \ln(0.025) \\
+\epsilon_j^2 &= \frac{\ln(1/0.025)}{2n_j} = \frac{\ln 40}{2n_j}  \\
+\epsilon_j &= \sqrt{\frac{\ln 40}{2n_j}} .
+\end{align*}
+
+\[
+\epsilon_1 = \sqrt{\frac{\ln 40}{2\cdot 50{,}000}} \approx 0.0061 \;,
+\qquad
+\epsilon_2 = \sqrt{\frac{\ln 40}{2\cdot 10{,}000}} \approx 0.0136 \;.
+\]
+
+\vspace{1cm}
+
+\paragraph{(ii)}
+
+\textbf{(a)} Let $E_j$ be the event that interval $j$ does not contain $\mu$, \ $|A_j - \mu| > \epsilon_j$.
+By Hoeffding, $P(E_j) \leq \delta_j$. Simultaneous validity fails when $E_1 \cup E_2$ occurs,
+so by the union bound
+\[
+P(\text{not simultaneously valid}) = P(E_1 \cup E_2) \;\leq\; P(E_1) + P(E_2) \;\leq\; \delta_1 + \delta_2 .
+\]
+
+\textbf{(b)} Suppose both intervals are valid, i.e.\ $|A_1 - \mu| \leq \epsilon_1$ and $|A_2 - \mu| \leq \epsilon_2$.
+So $\mu$ lies in both intervals:
+\[
+|A_1 - A_2| = |(A_1 - \mu) + (\mu - A_2)| \;\leq\; |A_1 - \mu| + |\mu - A_2| \;\leq\; \epsilon_1 + \epsilon_2 .
+\]
+
+\vspace{1cm}
+
+
+%=====================================================
+\section*{Problem 4: why mini-batches are less noisy than single-example SGD}
+
+\subsection*{4.1 One example}
+
+An expectation over $I$ is an average over $i$.
+
+\textbf{Unbiasedness}
+\[
+\E[\vect{g}_I] = \sum_{i=1}^{n} \frac{1}{n}\, \vect{g}_i = \vect{g}.
+\]
+
+\textbf{Noise}
+\[
+\E\big[\|\vect{g}_I - \vect{g}\|^2\big] = \frac{1}{n}\sum_{i=1}^{n} \|\vect{g}_i - \vect{g}\|^2 = \sigma^2 .
+\]
+
+\vspace{1cm}
+
+\subsection*{4.2 A mini-batch}
+
+Each $I_b$ is uniform on $\{1,\dots,n\}$, so by 4.1, $\E[\vect{g}_{I_b}] = \vect{g}$ and
+$\E\big[\|\vect{g}_{I_b} - \vect{g}\|^2\big] = \sigma^2$ for every $b$.
+
+\textbf{Unbiasedness} 
+\[
+\E[\hat{\vect{g}}_B] = \frac{1}{B}\sum_{b=1}^{B} \E[\vect{g}_{I_b}] = \frac{1}{B}\sum_{b=1}^{B} \vect{g} = \vect{g}.
+\]
+
+\textbf{Noise}
+\[
+\hat{\vect{g}}_B - \vect{g} = \frac{1}{B}\sum_{b=1}^{B} \big(\vect{g}_{I_b} - \vect{g}\big).
+\]
+Expanding the squared norm,
+\[
+\|\hat{\vect{g}}_B - \vect{g}\|^2
+= \frac{1}{B^2}\Big\| \sum_{b=1}^{B} \big(\vect{g}_{I_b} - \vect{g}\big) \Big\|^2
+= \frac{1}{B^2}\Big( \sum_{b=1}^{B} \|\vect{g}_{I_b} - \vect{g}\|^2
+  + \sum_{b \neq c} \big\langle \vect{g}_{I_b} - \vect{g},\; \vect{g}_{I_c} - \vect{g} \big\rangle \Big).
+\]
+For $b \neq c$, $I_b$ and $I_c$ are independent, so $\vect{g}_{I_b} - \vect{g}$ and $\vect{g}_{I_c} - \vect{g}$
+are independent and
+\[
+\E\big[\langle \vect{g}_{I_b} - \vect{g},\; \vect{g}_{I_c} - \vect{g} \rangle\big]
+= \big\langle \E[\vect{g}_{I_b}] - \vect{g},\; \E[\vect{g}_{I_c}] - \vect{g} \big\rangle
+= \langle \vect{g} - \vect{g},\; \vect{g} - \vect{g} \rangle
+= 0 .
+\]
+Therefore:
+\[
+\E\big[\|\hat{\vect{g}}_B - \vect{g}\|^2\big]
+= \frac{1}{B^2}\sum_{b=1}^{B} \E\big[\|\vect{g}_{I_b} - \vect{g}\|^2\big]
+= \frac{1}{B^2}\cdot B\sigma^2
+= \frac{\sigma^2}{B}.
+\]
+
+\vspace{1cm}
+
+
+%=====================================================
+\section*{Problem 5: linear regression -- closed form, GD, SGD}
+
+\subsection*{5.1 Closed form}
+
+\begin{center}
+\begin{tabular}{lc}
+train $\emprisk(\vect{w}_{LS})$ & 0.117523 \\
+train $\emprisk(\vect{0})$ & 37.6633 \\
+test $\emprisk(\vect{w}_{LS})$ & 0.139395 \\
+\end{tabular}
+\end{center}
+
+Train--test gap $\approx 0.022$, becuase $\vect{w}_{LS}$ is fit to part of the training noise, which helps on reduce train risk, but fitting to the noise in train set cannot generalize to test set, so here is the gap from.
+Training risk lands below the noise floor: $\vect{w}_{LS}$ minimizes $\emprisk$ on this data,
+so it also fits part of the training noise. Test risk lands above it because that fitted noise
+is pure error on fresh data.
+
+\subsection*{5.2 Gradient descent}
+\begin{center}
+\begin{tabular}{lc}
+$\eta$ & final $\emprisk$ after 20 iterations \\ \hline
+0.005 & 30.7255 \\
+0.5 & 0.117533 \\
+1.3 & 384.81
+\end{tabular}
+\end{center}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{gd_curves.pdf}
+\end{figure}
+
+When $\eta = 0.005$, the learning rate is too small, gradient is slowly decrease, which is waste lots of iterations. When $\eta = 0.5$, the learning rate is in good range, it makes gradient fast convergence.
+When $\eta = 1.3$, gradient moves too far and diverges eventually. Overall $\eta = 0.5$ gets closest to the closed-form optimum,
+$\emprisk = 0.117533$ vs.\ $0.117523$, a gap of about $10^{-5}$.
+
+\subsection*{5.3 SGD}
+
+\begin{center}
+\begin{tabular}{lc}
+$\eta$ & final $\emprisk$ after 1000 iterations \\ \hline
+0.001 & 5.886 \\
+0.01 & 0.23842 \\
+0.02 & 94.3621
+\end{tabular}
+\end{center}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{sgd_curves.pdf}
+\end{figure}
+
+\begin{itemize}
+    \item Gradient evaluations per step: GD uses $n = 1000$ example gradients, SGD uses 1.
+    \item Total passes over the data: GD uses $20$ passes, SGD uses $1$ pass.
+    \item Curve shape: GD is smooth because each step uses the exact gradient. SGD is jagged because each step uses one random example's gradient, which is unbiased but has noise, so individual steps can increase $\emprisk$.
+    \item GD ($\eta = 0.5$) reached $0.117533$, essentially the optimum, however for the best SGD
+    ($\eta = 0.01$) reached $0.23842$, about $2\times$ higher, since with a constant step size it keeps bouncing around the optimum, but GD used $20\times$ more data passes to get there.
+\end{itemize}
 
 \end{document}
